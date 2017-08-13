@@ -163,7 +163,7 @@ def model(X_train, Y_train, X_test, Y_test, num_iterations = 2000, learning_rate
     w = parameters["w"]
     b = parameters["b"]
 
-    # Predict test/train set examples (≈ 2 lines of code)
+    # Predict test/train set examples
     Y_prediction_test = predict(w, b, X_test)
     Y_prediction_train = predict(w, b, X_train)
 
