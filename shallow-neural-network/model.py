@@ -1,25 +1,23 @@
 # Package imports
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+#from testCases import *
 import sklearn
 import sklearn.datasets
 import sklearn.linear_model
-import matplotlib
-from utilities import plot_decision_boundary
+from utilities import plot_decision_boundary, sigmoid, load_planar_dataset
 
 ##---------------------------------------------------------
 # GENERATE DATASET
 ##---------------------------------------------------------
 
-# Seed NumPy random generator
-np.random.seed(0)
+# Seed NumPy random generator for consistent data
+np.random.seed(1)
 
-# Generate 200 data points distributed in the shape of two
-# interleaving half circles with given noise
-X, y = sklearn.datasets.make_moons(200, noise = 0.20)
+X, Y = load_planar_dataset()
 
-# Generate scatter plot of the dataset
-plt.scatter(X[:, 0], X[:, 1], s = 10, c = y, cmap = plt.cm.Spectral)
+# Visualize the data
+plt.scatter(X[0, :], X[1, :], c = Y, s = 40, cmap = plt.cm.Spectral);
 #plt.show()
 
 
@@ -28,116 +26,54 @@ plt.scatter(X[:, 0], X[:, 1], s = 10, c = y, cmap = plt.cm.Spectral)
 ##---------------------------------------------------------
 
 # Train a logistic regression model to fit the dataset
-log_reg_clf = sklearn.linear_model.LogisticRegressionCV()
-log_reg_clf.fit(X, y)
+clf = sklearn.linear_model.LogisticRegressionCV();
+clf.fit(X.T, Y.T);
 
 # Plot the dataset with the classification boundary found
 # through logistic regression
-plot_decision_boundary(lambda x: log_reg_clf.predict(x), X, y)
+plot_decision_boundary(lambda x: clf.predict(x), X, Y)
 plt.title("Logistic Regression")
 #plt.show()
 
 
 ##---------------------------------------------------------
-# BUILD 3-LAYERS NEURAL NETWORK MODEL
+# SETUP NEURAL NETWORK STRUCTURE
 ##---------------------------------------------------------
 
-# Model parameters
-nn_input_dim = 2 # input layer dimensionality
-nn_output_dim = 2 # output layer dimensionality
-alpha = 0.01 # learning rate for gradient descent
-reg_lambda = 0.01 # regularization strength
+# Arguments:    X -- input dataset of shape (input size, number of examples)
+#               Y -- labels of shape (output size, number of examples)
+# Returns:      n_x -- the size of the input layer
+#               n_h -- the size of the hidden layer
+#               n_y -- the size of the output layer
+def layer_sizes(X, Y):
+    n_x = np.shape(X)[0] # size of input layer
+    n_h = 4
+    n_y = np.shape(Y)[0] # size of output layer
 
-# Helper function to evaluate the total loss on the dataset
-def calculate_loss(model):
-    W1, b1, W2, b2 = model['W1'], model['b1'], model['W2'], model['b2']
+    return (n_x, n_h, n_y)
 
-    # Forward propagation to calculate predictions
-    z1 = X.dot(W1) + b1
-    a1 = np.tanh(z1)
-    z2 = a1.dot(W2) + b2
-    exp_scores = np.exp(z2)
-    probs = exp_scores / np.sum(exp_scores, axis = 1, keepdims = True)
+# Arguments:    n_x -- size of the input layer
+#               n_h -- size of the hidden layer
+#               n_y -- size of the output layer
+# Returns:      params -- python dictionary containing your parameters:
+#                   W1 -- weight matrix of shape (n_h, n_x)
+#                   b1 -- bias vector of shape (n_h, 1)
+#                   W2 -- weight matrix of shape (n_y, n_h)
+#                   b2 -- bias vector of shape (n_y, 1)
+def initialize_parameters(n_x, n_h, n_y):
 
-    # Calculating the loss
-    #corect_logprobs = -np.log(probs[range(len(X)), y])
-    data_loss = np.sum(probs)
+    np.random.seed(2)
 
-    # Add regulatization term to loss (optional)
-    #data_loss += reg_lambda/2 * (np.sum(np.square(W1)) + np.sum(np.square(W2)))
-    return 1./len(X) * data_loss
+    W1 = np.random.randn(n_h, n_x) * 0.01
+    b1 = np.zeros((n_h, 1))
+    W2 = np.random.randn(n_y, n_h) * 0.01
+    b2 = np.zeros((n_y, 1))
 
-# Helper function to predict an output (0 or 1)
-def predict(model, x):
-    W1, b1, W2, b2 = model['W1'], model['b1'], model['W2'], model['b2']
+    assert (W1.shape == (n_h, n_x))
+    assert (b1.shape == (n_h, 1))
+    assert (W2.shape == (n_y, n_h))
+    assert (b2.shape == (n_y, 1))
 
-    # Forward propagation
-    z1 = x.dot(W1) + b1
-    a1 = np.tanh(z1)
-    z2 = a1.dot(W2) + b2
-    exp_scores = np.exp(z2)
-    probs = exp_scores / np.sum(exp_scores, axis = 1, keepdims = True)
-    return np.argmax(probs, axis = 1)
+    parameters = {"W1": W1, "b1": b1, "W2": W2, "b2": b2}
 
-# This function learns parameters for the neural network and returns the model.
-# - nn_hdim: Number of nodes in the hidden layer
-# - num_passes: Number of passes through the training data for gradient descent
-# - print_loss: If True, print the loss every 1000 iterations
-def build_model(nn_hdim, num_passes = 20000, print_loss = False):
-
-    # Initialize the parameters to random values. We need to learn these.
-    np.random.seed(0)
-    W1 = np.random.randn(nn_input_dim, nn_hdim) / np.sqrt(nn_input_dim)
-    b1 = np.zeros((1, nn_hdim))
-    W2 = np.random.randn(nn_hdim, nn_output_dim) / np.sqrt(nn_hdim)
-    b2 = np.zeros((1, nn_output_dim))
-
-    # This is what we return at the end
-    model = {}
-
-    # Gradient descent. For each batch...
-    for i in range(0, num_passes):
-
-        # Forward propagation
-        z1 = X.dot(W1) + b1
-        a1 = np.tanh(z1)
-        z2 = a1.dot(W2) + b2
-        exp_scores = np.exp(z2)
-        probs = exp_scores / np.sum(exp_scores, axis = 1, keepdims = True)
-
-        # Backpropagation
-        delta3 = probs
-        delta3[range(len(X)), y] -= 1
-        dW2 = (a1.T).dot(delta3)
-        db2 = np.sum(delta3, axis = 0, keepdims = True)
-        delta2 = delta3.dot(W2.T) * (1 - np.power(a1, 2))
-        dW1 = np.dot(X.T, delta2)
-        db1 = np.sum(delta2, axis = 0)
-
-        # Add regularization terms (b1 and b2 don't have regularization terms)
-        dW2 += reg_lambda * W2
-        dW1 += reg_lambda * W1
-
-        # Gradient descent parameter update
-        W1 += -alpha * dW1
-        b1 += -alpha * db1
-        W2 += -alpha * dW2
-        b2 += -alpha * db2
-
-        # Assign new parameters to the model
-        model = { 'W1': W1, 'b1': b1, 'W2': W2, 'b2': b2}
-
-        # Optionally print the loss.
-        # This is expensive because it uses the whole dataset, so we don't want to do it too often.
-        if print_loss and i % 1000 == 0:
-          print('Loss after iteration {0:10d}: {1:10f}'.format(i, calculate_loss(model)))
-
-    return model
-
-# Build a model with a 3-dimensional hidden layer
-model = build_model(3, print_loss = True)
-
-# Plot the decision boundary
-plot_decision_boundary(lambda x: predict(model, x), X, y)
-plt.title("Decision Boundary for hidden layer size 3")
-plt.show()
+    return parameters
