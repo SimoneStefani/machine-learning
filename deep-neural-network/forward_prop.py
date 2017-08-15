@@ -13,7 +13,7 @@ from activation_functions import *
 # Returns:      Z -- the input of the activation function, also called pre-activation parameter
 #               cache -- a python dictionary containing "A", "W" and "b" ; stored for computing the backward pass efficiently
 def linear_forward(A, W, b):
-    Z = np.dot(W, A) + b
+    Z = W.dot(A) + b
 
     assert(Z.shape == (W.shape[0], A.shape[1]))
     cache = (A, W, b)
@@ -63,11 +63,11 @@ def L_model_forward(X, parameters):
     # Implement [LINEAR -> RELU]*(L-1). Add "cache" to the "caches" list.
     for l in range(1, L):
         A_prev = A
-        A, cache = linear_activation_forward(A_prev, parameters["W" + str(l)], parameters["b" + str(l)], "relu")
+        A, cache = linear_activation_forward(A_prev, parameters['W' + str(l)], parameters['b' + str(l)], activation = "relu")
         caches.append(cache)
 
     # Implement LINEAR -> SIGMOID. Add "cache" to the "caches" list.
-    AL, cache = linear_activation_forward(A, parameters["W" + str(L)], parameters["b" + str(L)], "sigmoid")
+    AL, cache = linear_activation_forward(A, parameters['W' + str(L)], parameters['b' + str(L)], activation = "sigmoid")
     caches.append(cache)
 
     assert(AL.shape == (1,X.shape[1]))
